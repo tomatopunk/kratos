@@ -12,6 +12,20 @@ import (
 
 const testTraceSlowLogThreshold = time.Duration(250 * time.Millisecond)
 
+type tconn struct {
+	err error
+}
+
+func (c *tconn) Close() error { return nil }
+func (c *tconn) Err() error   { return c.err }
+func (c *tconn) Do(commandName string, args ...interface{}) (reply interface{}, err error) {
+	return nil, nil
+}
+func (c *tconn) Send(commandName string, args ...interface{}) error { return nil }
+func (c *tconn) Flush() error                                       { return nil }
+func (c *tconn) Receive() (reply interface{}, err error)            { return nil, nil }
+func (c *tconn) WithContext(context.Context) Conn                   { return c }
+
 type mockTrace struct {
 	tags          []trace.Tag
 	logs          []trace.LogField
@@ -43,22 +57,10 @@ func (m *mockTrace) Visit(fn func(k, v string)) {}
 func (m *mockTrace) SetTitle(title string)      {}
 func (m *mockTrace) TraceID() string            { return "" }
 
-type mockConn struct{}
-
-func (c *mockConn) Close() error { return nil }
-func (c *mockConn) Err() error   { return nil }
-func (c *mockConn) Do(commandName string, args ...interface{}) (reply interface{}, err error) {
-	return nil, nil
-}
-func (c *mockConn) Send(commandName string, args ...interface{}) error { return nil }
-func (c *mockConn) Flush() error                                       { return nil }
-func (c *mockConn) Receive() (reply interface{}, err error)            { return nil, nil }
-func (c *mockConn) WithContext(context.Context) Conn                   { return c }
-
 func TestTraceDo(t *testing.T) {
 	tr := &mockTrace{}
 	ctx := trace.NewContext(context.Background(), tr)
-	tc := &traceConn{Conn: &mockConn{}, slowLogThreshold: testTraceSlowLogThreshold}
+	tc := &traceConn{Conn: &tconn{}, slowLogThreshold: testTraceSlowLogThreshold}
 	conn := tc.WithContext(ctx)
 
 	conn.Do("GET", "test")
@@ -71,7 +73,7 @@ func TestTraceDo(t *testing.T) {
 func TestTraceDoErr(t *testing.T) {
 	tr := &mockTrace{}
 	ctx := trace.NewContext(context.Background(), tr)
-	tc := &traceConn{Conn: MockErr{Error: fmt.Errorf("hhhhhhh")},
+	tc := &traceConn{Conn: &tconn{err: fmt.Errorf("hhhhhhh")},
 		slowLogThreshold: testTraceSlowLogThreshold}
 	conn := tc.WithContext(ctx)
 
@@ -85,7 +87,7 @@ func TestTraceDoErr(t *testing.T) {
 func TestTracePipeline(t *testing.T) {
 	tr := &mockTrace{}
 	ctx := trace.NewContext(context.Background(), tr)
-	tc := &traceConn{Conn: &mockConn{}, slowLogThreshold: testTraceSlowLogThreshold}
+	tc := &traceConn{Conn: &tconn{}, slowLogThreshold: testTraceSlowLogThreshold}
 	conn := tc.WithContext(ctx)
 
 	N := 2
@@ -106,7 +108,7 @@ func TestTracePipeline(t *testing.T) {
 func TestTracePipelineErr(t *testing.T) {
 	tr := &mockTrace{}
 	ctx := trace.NewContext(context.Background(), tr)
-	tc := &traceConn{Conn: MockErr{Error: fmt.Errorf("hahah")},
+	tc := &traceConn{Conn: &tconn{err: fmt.Errorf("hahah")},
 		slowLogThreshold: testTraceSlowLogThreshold}
 	conn := tc.WithContext(ctx)
 
@@ -135,7 +137,7 @@ func TestTracePipelineErr(t *testing.T) {
 func TestSendStatement(t *testing.T) {
 	tr := &mockTrace{}
 	ctx := trace.NewContext(context.Background(), tr)
-	tc := &traceConn{Conn: MockErr{Error: fmt.Errorf("hahah")},
+	tc := &traceConn{Conn: &tconn{err: fmt.Errorf("hahah")},
 		slowLogThreshold: testTraceSlowLogThreshold}
 	conn := tc.WithContext(ctx)
 	conn.Send("SET", "hello", "test")
@@ -162,7 +164,7 @@ func TestSendStatement(t *testing.T) {
 func TestDoStatement(t *testing.T) {
 	tr := &mockTrace{}
 	ctx := trace.NewContext(context.Background(), tr)
-	tc := &traceConn{Conn: MockErr{Error: fmt.Errorf("hahah")},
+	tc := &traceConn{Conn: &tconn{err: fmt.Errorf("hahah")},
 		slowLogThreshold: testTraceSlowLogThreshold}
 	conn := tc.WithContext(ctx)
 	conn.Do("SET", "hello", "test")
@@ -170,23 +172,4 @@ func TestDoStatement(t *testing.T) {
 	assert.Equal(t, "Redis:SET", tr.operationName)
 	assert.Equal(t, "SET hello", tr.tags[len(tr.tags)-1].Value)
 	assert.True(t, tr.finished)
-}
-
-func BenchmarkTraceConn(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		c, err := DialDefaultServer()
-		if err != nil {
-			b.Fatal(err)
-		}
-		t := &traceConn{
-			Conn:             c,
-			connTags:         []trace.Tag{trace.TagString(trace.TagPeerAddress, "abc")},
-			slowLogThreshold: time.Duration(1 * time.Second),
-		}
-		c2 := t.WithContext(context.TODO())
-		if _, err := c2.Do("PING"); err != nil {
-			b.Fatal(err)
-		}
-		c2.Close()
-	}
 }

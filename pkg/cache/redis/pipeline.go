@@ -18,7 +18,7 @@ var (
 )
 
 type pipeliner struct {
-	pool *Pool
+	r    *Redis
 	cmds []*cmd
 }
 
@@ -54,12 +54,13 @@ func (p *pipeliner) Send(commandName string, args ...interface{}) {
 	return
 }
 
-func (p *pipeliner) Exec(ctx context.Context) (rs *Replies, err error) {
+func (p *pipeliner) Exec(ctx context.Context) (*Replies, error) {
 	n := len(p.cmds)
 	if n == 0 {
 		return &Replies{}, nil
 	}
-	c := p.pool.Get(ctx)
+
+	c := p.r.Conn(ctx)
 	defer c.Close()
 	for len(p.cmds) > 0 {
 		cmd := p.cmds[0]
@@ -69,7 +70,7 @@ func (p *pipeliner) Exec(ctx context.Context) (rs *Replies, err error) {
 			return nil, err
 		}
 	}
-	if err = c.Flush(); err != nil {
+	if err := c.Flush(); err != nil {
 		p.cmds = p.cmds[:0]
 		return nil, err
 	}
@@ -78,8 +79,5 @@ func (p *pipeliner) Exec(ctx context.Context) (rs *Replies, err error) {
 		rp, err := c.Receive()
 		rps = append(rps, &reply{reply: rp, err: err})
 	}
-	rs = &Replies{
-		replies: rps,
-	}
-	return
+	return &Replies{replies: rps}, nil
 }

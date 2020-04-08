@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	errPubSub = errors.New("redigo: unknown pubsub notification")
+	errPubSub = errors.New("redis: unknown pubsub notification")
 )
 
 // Subscription represents a subscribe or unsubscribe notification.

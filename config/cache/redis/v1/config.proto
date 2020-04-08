@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+import "config/container/pool/v1/config.proto"
+import "google/protobuf/duration.proto";
+
+package kratos.config.cache.redis.v1;
+
+message Config {
+    string network = 1;
+    string address = 2;
+    int32 database = 3;
+    string password = 4;
+    kratos.config.container.pool.v1.Config pool= 5;
+    
+    google.protobuf.Duration connect_timeout = 6;
+    google.protobuf.Duration read_timeout = 7;
+    google.protobuf.Duration write_timeout = 8;
+}

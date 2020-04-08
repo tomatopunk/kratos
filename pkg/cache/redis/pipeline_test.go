@@ -11,22 +11,17 @@ import (
 	xtime "github.com/go-kratos/kratos/pkg/time"
 )
 
-func TestRedis_Pipeline(t *testing.T) {
-	conf := &Config{
-		Name:         "test",
-		Proto:        "tcp",
-		Addr:         testRedisAddr,
-		DialTimeout:  xtime.Duration(1 * time.Second),
-		ReadTimeout:  xtime.Duration(1 * time.Second),
-		WriteTimeout: xtime.Duration(1 * time.Second),
-	}
-	conf.Config = &pool.Config{
-		Active:      10,
-		Idle:        2,
-		IdleTimeout: xtime.Duration(90 * time.Second),
-	}
+func getTestRedis() (*Redis, error) {
+	return Dial("tcp", testRedisAddr,
+		ReadTimeout(1*time.Second),
+		WriteTimeout(1*time.Second),
+		ConnectTimeout(1*time.Second),
+		Pool(pool.Config{Active: 10, Idle: 2, IdleTimeout: xtime.Duration(90 * time.Second)}),
+	)
+}
 
-	r := NewRedis(conf)
+func TestRedis_Pipeline(t *testing.T) {
+	r, _ := getTestRedis()
 	r.Do(context.TODO(), "FLUSHDB")
 
 	p := r.Pipeline()
@@ -56,7 +51,7 @@ func TestRedis_Pipeline(t *testing.T) {
 }
 
 func ExamplePipeliner() {
-	r := NewRedis(testConfig)
+	r, _ := Dial("tcp", "127.0.0.1:6349")
 	defer r.Close()
 
 	pip := r.Pipeline()
@@ -79,7 +74,7 @@ func ExamplePipeliner() {
 }
 
 func BenchmarkRedisPipelineExec(b *testing.B) {
-	r := NewRedis(testConfig)
+	r, _ := getTestRedis()
 	defer r.Close()
 
 	r.Do(context.TODO(), "SET", "abcde", "fghiasdfasdf")

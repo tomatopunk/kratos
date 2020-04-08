@@ -15,6 +15,7 @@
 package redis
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -33,16 +34,13 @@ func ExampleScript() {
 	// In a function, use the script Do method to evaluate the script. The Do
 	// method optimistically uses the EVALSHA command. If the script is not
 	// loaded, then the Do method falls back to the EVAL command.
-	if _, err = getScript.Do(c, "foo"); err != nil {
+	if _, err = getScript.Do(c.Conn(context.TODO()), "foo"); err != nil {
 		// handle error
 	}
 }
 
 func TestScript(t *testing.T) {
-	c, err := DialDefaultServer()
-	if err != nil {
-		t.Fatalf("error connection to database, %v", err)
-	}
+	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 
 	// To test fall back in Do, we make script unique by adding comment with current time.

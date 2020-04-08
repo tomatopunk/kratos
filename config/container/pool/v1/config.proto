@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "config/container/pool/v1/config.proto"
+import "google/protobuf/duration.proto";
+
+package kratos.config.cache.redis.v1;
+
+message Config {
+    int32 active = 1;
+    int32 idle = 2;
+    bool wait = 3;
+
+    google.protobuf.Duration idle_timeout = 4;
+    google.protobuf.Duration wait_timeout = 5;
+}

@@ -6,6 +6,11 @@ import (
 	pkgerr "github.com/pkg/errors"
 )
 
+// Error represents an error returned in a command reply.
+type Error string
+
+func (err Error) Error() string { return string(err) }
+
 func formatErr(err error, name, addr string) string {
 	e := pkgerr.Cause(err)
 	switch e {

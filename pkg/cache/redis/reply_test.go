@@ -15,6 +15,7 @@
 package redis
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -112,7 +113,7 @@ func TestReply(t *testing.T) {
 
 // dial wraps DialDefaultServer() with a more suitable function name for examples.
 func dial() (Conn, error) {
-	return DialDefaultServer()
+	return testRedis.Conn(context.TODO()), nil
 }
 
 func ExampleBool() {

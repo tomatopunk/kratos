@@ -15,6 +15,7 @@
 package redis
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -108,16 +109,10 @@ func expectPushed(t *testing.T, c PubSubConn, message string, expected interface
 }
 
 func TestPushed(t *testing.T) {
-	pc, err := DialDefaultServer()
-	if err != nil {
-		t.Fatalf("error connection to database, %v", err)
-	}
+	pc := testRedis.Conn(context.TODO())
 	defer pc.Close()
 
-	sc, err := DialDefaultServer()
-	if err != nil {
-		t.Fatalf("error connection to database, %v", err)
-	}
+	sc := testRedis.Conn(context.TODO())
 	defer sc.Close()
 
 	c := PubSubConn{Conn: sc}
