@@ -113,6 +113,7 @@ func TestReply(t *testing.T) {
 
 // dial wraps DialDefaultServer() with a more suitable function name for examples.
 func dial() (Conn, error) {
+	testRedis := getTestRedis()
 	return testRedis.Conn(context.TODO()), nil
 }
 

@@ -5,23 +5,10 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
-	"time"
-
-	"github.com/go-kratos/kratos/pkg/container/pool"
-	xtime "github.com/go-kratos/kratos/pkg/time"
 )
 
-func getTestRedis() (*Redis, error) {
-	return Dial("tcp", testRedisAddr,
-		ReadTimeout(1*time.Second),
-		WriteTimeout(1*time.Second),
-		ConnectTimeout(1*time.Second),
-		Pool(pool.Config{Active: 10, Idle: 2, IdleTimeout: xtime.Duration(90 * time.Second)}),
-	)
-}
-
 func TestRedis_Pipeline(t *testing.T) {
-	r, _ := getTestRedis()
+	r := getTestRedis()
 	r.Do(context.TODO(), "FLUSHDB")
 
 	p := r.Pipeline()
@@ -74,7 +61,7 @@ func ExamplePipeliner() {
 }
 
 func BenchmarkRedisPipelineExec(b *testing.B) {
-	r, _ := getTestRedis()
+	r := getTestRedis()
 	defer r.Close()
 
 	r.Do(context.TODO(), "SET", "abcde", "fghiasdfasdf")

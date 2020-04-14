@@ -14,17 +14,10 @@ import (
 
 var (
 	testRedisAddr = "localhost:6379"
-	testRedis     *Redis
 )
 
-func TestMain(m *testing.M) {
-	flag.Set("f", "./test/docker-compose.yaml")
-	if err := lich.Setup(); err != nil {
-		panic(err)
-	}
-	defer lich.Teardown()
-
-	testRedis, _ = Dial("tcp", testRedisAddr,
+func getTestRedis() *Redis {
+	testRedis, err := Dial("tcp", testRedisAddr,
 		ConnectTimeout(1*time.Second),
 		ReadTimeout(1*time.Second),
 		WriteTimeout(1*time.Second),
@@ -34,8 +27,19 @@ func TestMain(m *testing.M) {
 			IdleTimeout: xtime.Duration(90 * time.Second),
 		}),
 	)
-
+	if err != nil {
+		panic(err)
+	}
 	testRedis.Do(context.TODO(), "FLUSHDB")
+	return testRedis
+}
+
+func TestMain(m *testing.M) {
+	flag.Set("f", "./test/docker-compose.yaml")
+	if err := lich.Setup(); err != nil {
+		panic(err)
+	}
+	defer lich.Teardown()
 
 	ret := m.Run()
 	os.Exit(ret)

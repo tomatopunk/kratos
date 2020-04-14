@@ -109,6 +109,7 @@ func expectPushed(t *testing.T, c PubSubConn, message string, expected interface
 }
 
 func TestPushed(t *testing.T) {
+	testRedis := getTestRedis()
 	pc := testRedis.Conn(context.TODO())
 	defer pc.Close()
 

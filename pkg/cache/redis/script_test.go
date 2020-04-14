@@ -40,6 +40,7 @@ func ExampleScript() {
 }
 
 func TestScript(t *testing.T) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 

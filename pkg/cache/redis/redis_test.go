@@ -13,6 +13,7 @@ import (
 )
 
 func TestRedis(t *testing.T) {
+	testRedis := getTestRedis()
 	testSet(t, testRedis)
 	testSend(t, testRedis)
 	testGet(t, testRedis)
@@ -156,7 +157,7 @@ var testRedisCommands = []struct {
 }
 
 func TestRedis_Do(t *testing.T) {
-	r := testRedis
+	r := getTestRedis()
 	r.Do(context.TODO(), "FLUSHDB")
 
 	for _, cmd := range testRedisCommands {
@@ -245,7 +246,7 @@ func TestRedis_Do(t *testing.T) {
 //}
 
 func BenchmarkRedisDoPing(b *testing.B) {
-	r := testRedis
+	r := getTestRedis()
 	defer r.Close()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -256,7 +257,7 @@ func BenchmarkRedisDoPing(b *testing.B) {
 }
 
 func BenchmarkRedisDoSET(b *testing.B) {
-	r := testRedis
+	r := getTestRedis()
 	defer r.Close()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -267,7 +268,7 @@ func BenchmarkRedisDoSET(b *testing.B) {
 }
 
 func BenchmarkRedisDoGET(b *testing.B) {
-	r := testRedis
+	r := getTestRedis()
 	defer r.Close()
 	r.Do(context.Background(), "SET", "a", "b")
 	b.ResetTimer()

@@ -89,6 +89,7 @@ func (d *poolDialer) dial() (Conn, error) {
 	if dialErr != nil {
 		return nil, d.dialErr
 	}
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	d.mu.Lock()
 	d.open += 1
@@ -112,7 +113,7 @@ func (d *poolDialer) check(message string, p *Redis, dialed, open int) {
 
 func TestPoolReuse(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 	var err error
 
 	for i := 0; i < 10; i++ {
@@ -135,7 +136,7 @@ func TestPoolReuse(t *testing.T) {
 
 func TestPoolMaxIdle(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	for i := 0; i < 10; i++ {
 		c1 := p.Conn(context.TODO())
@@ -155,7 +156,7 @@ func TestPoolMaxIdle(t *testing.T) {
 
 func TestPoolError(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	c := p.Conn(context.TODO())
 	c.Do("ERR", io.EOF)
@@ -173,7 +174,7 @@ func TestPoolError(t *testing.T) {
 
 func TestPoolClose(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	c1 := p.Conn(context.TODO())
 	c1.Do("PING")
@@ -209,7 +210,7 @@ func TestPoolClose(t *testing.T) {
 }
 
 func TestPoolConcurrenSendReceive(t *testing.T) {
-	p := testRedis
+	p := getTestRedis()
 
 	c := p.Conn(context.TODO())
 	done := make(chan error, 1)
@@ -232,7 +233,7 @@ func TestPoolConcurrenSendReceive(t *testing.T) {
 
 func TestPoolMaxActive(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	c1 := p.Conn(context.TODO())
 	c1.Do("PING")
@@ -262,7 +263,7 @@ func TestPoolMaxActive(t *testing.T) {
 
 func TestPoolMonitorCleanup(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	c := p.Conn(context.TODO())
 	c.Send("MONITOR")
@@ -273,7 +274,7 @@ func TestPoolMonitorCleanup(t *testing.T) {
 
 func TestPoolPubSubCleanup(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	c := p.Conn(context.TODO())
 	c.Send("SUBSCRIBE", "x")
@@ -298,7 +299,7 @@ func TestPoolPubSubCleanup(t *testing.T) {
 
 func TestPoolTransactionCleanup(t *testing.T) {
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	c := p.Conn(context.TODO())
 	c.Do("WATCH", "key")
@@ -382,7 +383,7 @@ func startGoroutines(p *Redis, cmd string, args ...interface{}) chan error {
 func TestWaitPoolDialError(t *testing.T) {
 	testErr := errors.New("test")
 	d := poolDialer{t: t}
-	p := testRedis
+	p := getTestRedis()
 
 	c := p.Conn(context.TODO())
 	errs := startGoroutines(p, "ERR", testErr)
@@ -421,7 +422,7 @@ func TestWaitPoolDialError(t *testing.T) {
 
 func BenchmarkPoolGet(b *testing.B) {
 	b.StopTimer()
-	p := testRedis
+	p := getTestRedis()
 	c := p.Conn(context.Background())
 	if err := c.Err(); err != nil {
 		b.Fatal(err)
@@ -437,7 +438,7 @@ func BenchmarkPoolGet(b *testing.B) {
 
 func BenchmarkPoolGetErr(b *testing.B) {
 	b.StopTimer()
-	p := testRedis
+	p := getTestRedis()
 	c := p.Conn(context.Background())
 	if err := c.Err(); err != nil {
 		b.Fatal(err)
@@ -456,7 +457,7 @@ func BenchmarkPoolGetErr(b *testing.B) {
 
 func BenchmarkPoolGetPing(b *testing.B) {
 	b.StopTimer()
-	p := testRedis
+	p := getTestRedis()
 	c := p.Conn(context.Background())
 	if err := c.Err(); err != nil {
 		b.Fatal(err)
@@ -474,7 +475,7 @@ func BenchmarkPoolGetPing(b *testing.B) {
 }
 
 func BenchmarkPooledConn(b *testing.B) {
-	p := testRedis
+	p := getTestRedis()
 	for i := 0; i < b.N; i++ {
 		ctx := context.TODO()
 		c := p.Conn(ctx)

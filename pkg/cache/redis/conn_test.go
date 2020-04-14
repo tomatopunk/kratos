@@ -272,8 +272,11 @@ var testCommands = []struct {
 }
 
 func TestDoCommands(t *testing.T) {
+	testRedis := getTestRedis()
+	c := testRedis.Conn(context.TODO())
+	defer c.Close()
 	for _, cmd := range testCommands {
-		actual, err := testRedis.Do(context.TODO(), cmd.args[0].(string), cmd.args[1:]...)
+		actual, err := c.Do(cmd.args[0].(string), cmd.args[1:]...)
 		if err != nil {
 			t.Errorf("Do(%v) returned error %v", cmd.args, err)
 			continue
@@ -285,6 +288,7 @@ func TestDoCommands(t *testing.T) {
 }
 
 func TestPipelineCommands(t *testing.T) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 	for _, cmd := range testCommands {
@@ -307,6 +311,7 @@ func TestPipelineCommands(t *testing.T) {
 }
 
 func TestBlankCommmand(t *testing.T) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 
@@ -331,6 +336,7 @@ func TestBlankCommmand(t *testing.T) {
 }
 
 func TestRecvBeforeSend(t *testing.T) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 
@@ -350,6 +356,7 @@ func TestRecvBeforeSend(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 
@@ -430,6 +437,7 @@ func TestReadTimeout(t *testing.T) {
 // http://io/topics/transactions for information on how Redis handles
 // errors in a transaction.
 func TestExecError(t *testing.T) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 
@@ -506,6 +514,7 @@ func TestExecError(t *testing.T) {
 }
 
 func BenchmarkDoEmpty(b *testing.B) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 
@@ -518,6 +527,7 @@ func BenchmarkDoEmpty(b *testing.B) {
 }
 
 func BenchmarkDoPing(b *testing.B) {
+	testRedis := getTestRedis()
 	c := testRedis.Conn(context.TODO())
 	defer c.Close()
 
@@ -530,6 +540,7 @@ func BenchmarkDoPing(b *testing.B) {
 }
 
 func BenchmarkConn(b *testing.B) {
+	testRedis := getTestRedis()
 	for i := 0; i < b.N; i++ {
 		c := testRedis.Conn(context.TODO())
 
