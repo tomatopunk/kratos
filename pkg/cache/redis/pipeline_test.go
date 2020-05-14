@@ -37,9 +37,8 @@ func TestRedis_Pipeline(t *testing.T) {
 	}
 }
 
-func ExamplePipeliner() {
-	r, _ := Dial("tcp", "127.0.0.1:6349")
-	defer r.Close()
+func ExamplePipeline() {
+	r := getTestRedis()
 
 	pip := r.Pipeline()
 	pip.Send("SET", "hello", "world")

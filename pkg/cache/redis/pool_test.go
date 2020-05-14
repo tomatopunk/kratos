@@ -15,9 +15,11 @@
 package redis
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"io"
+	"net"
 	"reflect"
 	"sync"
 	"testing"
@@ -30,7 +32,6 @@ type poolTestConn struct {
 	d   *poolDialer
 	err error
 	c   Conn
-	ctx context.Context
 }
 
 func (c *poolTestConn) Flush() error {
@@ -43,7 +44,6 @@ func (c *poolTestConn) Receive() (reply interface{}, err error) {
 
 func (c *poolTestConn) WithContext(ctx context.Context) Conn {
 	c.c.WithContext(ctx)
-	c.ctx = ctx
 	return c
 }
 
@@ -81,6 +81,24 @@ type poolDialer struct {
 	dialErr  error
 }
 
+func getTestConn() Conn {
+	o := options{
+		dial: net.Dial,
+	}
+	netConn, err := o.dial("tcp", testRedisAddr)
+	if err != nil {
+		panic(err)
+	}
+	c := &conn{
+		conn:         netConn,
+		bw:           bufio.NewWriter(netConn),
+		br:           bufio.NewReader(netConn),
+		readTimeout:  o.readTimeout,
+		writeTimeout: o.writeTimeout,
+	}
+	return c
+}
+
 func (d *poolDialer) dial() (Conn, error) {
 	d.mu.Lock()
 	d.dialed += 1
@@ -89,8 +107,7 @@ func (d *poolDialer) dial() (Conn, error) {
 	if dialErr != nil {
 		return nil, d.dialErr
 	}
-	testRedis := getTestRedis()
-	c := testRedis.Conn(context.TODO())
+	c := getTestConn()
 	d.mu.Lock()
 	d.open += 1
 	d.mu.Unlock()
@@ -114,16 +131,19 @@ func (d *poolDialer) check(message string, p *Redis, dialed, open int) {
 func TestPoolReuse(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
+
 	var err error
 
 	for i := 0; i < 10; i++ {
 		c1 := p.Conn(context.TODO())
-		c1.Do("PING")
+		_, err = c1.Do("PING")
 		c2 := p.Conn(context.TODO())
-		c2.Do("PING")
+		_, err = c2.Do("PING")
 		c1.Close()
 		c2.Close()
-
 	}
 
 	d.check("before close", p, 2, 2)
@@ -137,6 +157,9 @@ func TestPoolReuse(t *testing.T) {
 func TestPoolMaxIdle(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	for i := 0; i < 10; i++ {
 		c1 := p.Conn(context.TODO())
@@ -157,6 +180,9 @@ func TestPoolMaxIdle(t *testing.T) {
 func TestPoolError(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c := p.Conn(context.TODO())
 	c.Do("ERR", io.EOF)
@@ -175,6 +201,9 @@ func TestPoolError(t *testing.T) {
 func TestPoolClose(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c1 := p.Conn(context.TODO())
 	c1.Do("PING")
@@ -209,8 +238,12 @@ func TestPoolClose(t *testing.T) {
 	}
 }
 
-func TestPoolConcurrenSendReceive(t *testing.T) {
+func TestPoolConcurrentSendReceive(t *testing.T) {
+	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c := p.Conn(context.TODO())
 	done := make(chan error, 1)
@@ -234,6 +267,9 @@ func TestPoolConcurrenSendReceive(t *testing.T) {
 func TestPoolMaxActive(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c1 := p.Conn(context.TODO())
 	c1.Do("PING")
@@ -264,6 +300,9 @@ func TestPoolMaxActive(t *testing.T) {
 func TestPoolMonitorCleanup(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c := p.Conn(context.TODO())
 	c.Send("MONITOR")
@@ -275,6 +314,9 @@ func TestPoolMonitorCleanup(t *testing.T) {
 func TestPoolPubSubCleanup(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c := p.Conn(context.TODO())
 	c.Send("SUBSCRIBE", "x")
@@ -300,6 +342,9 @@ func TestPoolPubSubCleanup(t *testing.T) {
 func TestPoolTransactionCleanup(t *testing.T) {
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c := p.Conn(context.TODO())
 	c.Do("WATCH", "key")
@@ -384,6 +429,9 @@ func TestWaitPoolDialError(t *testing.T) {
 	testErr := errors.New("test")
 	d := poolDialer{t: t}
 	p := getTestRedis()
+	p.p.New = func(ctx context.Context) (io.Closer, error) {
+		return d.dial()
+	}
 
 	c := p.Conn(context.TODO())
 	errs := startGoroutines(p, "ERR", testErr)

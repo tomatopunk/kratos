@@ -19,7 +19,7 @@ type tconn struct {
 func (c *tconn) Close() error { return nil }
 func (c *tconn) Err() error   { return c.err }
 func (c *tconn) Do(commandName string, args ...interface{}) (reply interface{}, err error) {
-	return nil, nil
+	return nil, c.err
 }
 func (c *tconn) Send(commandName string, args ...interface{}) error { return nil }
 func (c *tconn) Flush() error                                       { return nil }

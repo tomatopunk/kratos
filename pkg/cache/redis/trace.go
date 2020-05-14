@@ -130,6 +130,7 @@ func (t *traceConn) Receive() (reply interface{}, err error) {
 
 func (t *traceConn) WithContext(ctx context.Context) Conn {
 	t.Conn = t.Conn.WithContext(ctx)
+	t.tr, _ = trace.FromContext(ctx)
 	t.pending = 0
 	t.trPipe = nil
 	return t
