@@ -22,8 +22,8 @@ func getTestRedis() *Redis {
 		ReadTimeout(1*time.Second),
 		WriteTimeout(1*time.Second),
 		Pool(pool.Config{
-			Active:      10,
-			Idle:        0,
+			Active:      20,
+			Idle:        2,
 			IdleTimeout: xtime.Duration(90 * time.Second),
 		}),
 	)
