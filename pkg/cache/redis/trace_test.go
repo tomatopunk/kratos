@@ -16,14 +16,14 @@ type tconn struct {
 	err error
 }
 
-func (c *tconn) Close() error { return nil }
+func (c *tconn) Close() error { return c.err }
 func (c *tconn) Err() error   { return c.err }
 func (c *tconn) Do(commandName string, args ...interface{}) (reply interface{}, err error) {
 	return nil, c.err
 }
-func (c *tconn) Send(commandName string, args ...interface{}) error { return nil }
-func (c *tconn) Flush() error                                       { return nil }
-func (c *tconn) Receive() (reply interface{}, err error)            { return nil, nil }
+func (c *tconn) Send(commandName string, args ...interface{}) error { return c.err }
+func (c *tconn) Flush() error                                       { return c.err }
+func (c *tconn) Receive() (reply interface{}, err error)            { return nil, c.err }
 func (c *tconn) WithContext(context.Context) Conn                   { return c }
 
 type mockTrace struct {
